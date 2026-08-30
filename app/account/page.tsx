@@ -31,6 +31,14 @@ export default function AccountPage() {
     const error = query.get('error');
     const errorDescription = query.get('error_description') ?? fragment.get('error_description');
     const confirmed = query.get('confirmed') === 'true';
+    const requestedReturnTo = query.get('returnTo');
+    const returnTo = requestedReturnTo?.startsWith('/') && !requestedReturnTo.startsWith('//')
+      ? requestedReturnTo
+      : '/admin';
+
+    getSupabaseBrowserClient().auth.getUser().then(({ data }) => {
+      if (data.user && error !== 'admin_required') window.location.replace(returnTo);
+    });
 
     if (errorCode === 'otp_expired') {
       setNeedsConfirmation(true);
@@ -42,8 +50,10 @@ export default function AccountPage() {
       setNeedsConfirmation(true);
       setMessage({ type: 'error', text: errorDescription.replace(/\+/g, ' ') });
     } else if (confirmed) {
+      setMessage({ type: 'success', text: 'Your email is confirmed. Opening your dashboard…' });
+    } else if (error === 'admin_required') {
       setMode('signin');
-      setMessage({ type: 'success', text: 'Your email has been confirmed. You can now sign in.' });
+      setMessage({ type: 'error', text: 'This account does not have access to the private catalog. Sign in with the gallery owner account.' });
     }
   }, []);
 
@@ -102,7 +112,10 @@ export default function AccountPage() {
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email: submittedEmail, password });
         if (error) throw error;
-        window.location.assign('/admin');
+        const query = new URLSearchParams(window.location.search);
+        const requestedReturnTo = query.get('returnTo');
+        const returnTo = requestedReturnTo?.startsWith('/') && !requestedReturnTo.startsWith('//') ? requestedReturnTo : '/admin';
+        window.location.assign(returnTo);
       }
     } catch (error) {
       setMessage({ type: 'error', text: error instanceof Error ? error.message : 'We could not complete that request.' });

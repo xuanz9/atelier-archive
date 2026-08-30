@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { ArtworkView } from '@/lib/catalog';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 
 const statuses = ['All works', 'Available', 'Reserved', 'Sold'];
 
@@ -17,8 +18,10 @@ export default function Home() {
   const [status, setStatus] = useState('All works');
   const [selected, setSelected] = useState<ArtworkView | null>(null);
   const [inquiryState, setInquiryState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const [signedIn, setSignedIn] = useState(false);
 
   useEffect(() => {
+    getSupabaseBrowserClient().auth.getSession().then(({ data }) => setSignedIn(Boolean(data.session)));
     fetch('/api/artworks')
       .then(async (response) => {
         if (!response.ok) throw new Error('Unable to load the collection.');
@@ -56,8 +59,8 @@ export default function Home() {
       <header className="border-b border-border/70 bg-background/95">
         <div className="mx-auto flex h-20 max-w-[1600px] items-center justify-between px-5 md:px-10">
           <a href="#collection" className="flex items-center gap-3" aria-label="Atelier Archive home"><span className="grid size-9 place-items-center border border-foreground text-sm font-semibold">A</span><span className="font-heading text-lg tracking-[0.16em]">ATELIER ARCHIVE</span></a>
-          <nav className="hidden items-center gap-8 text-sm md:flex" aria-label="Main navigation"><a href="#collection" className="border-b border-foreground pb-1">Collection</a><a href="#artists" className="text-muted-foreground transition-colors hover:text-foreground">Artists</a><a href="/account" className="text-muted-foreground transition-colors hover:text-foreground">Account</a></nav>
-          <Button render={<a href="/account" />} nativeButton={false} className="rounded-none px-5" size="lg">My account <ArrowUpRight /></Button>
+          <nav className="hidden items-center gap-8 text-sm md:flex" aria-label="Main navigation"><a href="#collection" className="border-b border-foreground pb-1">Collection</a><a href="#artists" className="text-muted-foreground transition-colors hover:text-foreground">Artists</a><a href={signedIn ? '/admin' : '/account'} className="text-muted-foreground transition-colors hover:text-foreground">{signedIn ? 'Dashboard' : 'Account'}</a></nav>
+          <Button render={<a href={signedIn ? '/admin' : '/account'} />} nativeButton={false} className="rounded-none px-5" size="lg">{signedIn ? 'Dashboard' : 'My account'} <ArrowUpRight /></Button>
         </div>
       </header>
 
