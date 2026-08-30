@@ -47,9 +47,9 @@ export default function Home() {
           <nav className="hidden items-center gap-8 text-sm md:flex" aria-label="Main navigation">
             <a href="#collection" className="border-b border-foreground pb-1">Collection</a>
             <a href="#artists" className="text-muted-foreground transition-colors hover:text-foreground">Artists</a>
-            <a href="#about" className="text-muted-foreground transition-colors hover:text-foreground">About</a>
+            <a href="/account" className="text-muted-foreground transition-colors hover:text-foreground">Account</a>
           </nav>
-          <Button render={<a href="/admin" />} nativeButton={false} className="rounded-none px-5" size="lg">Private view <ArrowUpRight /></Button>
+          <Button render={<a href="/account" />} nativeButton={false} className="rounded-none px-5" size="lg">My account <ArrowUpRight /></Button>
         </div>
       </header>
 
