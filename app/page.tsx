@@ -41,6 +41,22 @@ export default function Home() {
     });
   }, [artworks, query, status]);
 
+  const artistDirectory = useMemo(() => {
+    const directory = new Map<string, { name: string; works: ArtworkView[] }>();
+    artworks.forEach((work) => {
+      const entry = directory.get(work.artist) || { name: work.artist, works: [] };
+      entry.works.push(work);
+      directory.set(work.artist, entry);
+    });
+    return [...directory.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [artworks]);
+
+  function exploreArtist(name: string) {
+    setStatus('All works');
+    setQuery(name);
+    document.querySelector('#collection')?.scrollIntoView({ behavior: 'smooth' });
+  }
+
   async function submitInquiry(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selected) return;
@@ -83,6 +99,25 @@ export default function Home() {
             </button>
           ))}</div>
         ) : !loading ? <EmptyState title="No works found" note="Try another search or availability filter." action={() => { setQuery(''); setStatus('All works'); }} /> : null}
+      </section>
+
+      <section id="artists" className="border-t border-border bg-[#f3efe7] scroll-mt-20">
+        <div className="mx-auto max-w-[1600px] px-5 py-20 md:px-10 md:py-28">
+          <header className="grid gap-6 border-b border-border pb-10 lg:grid-cols-[1fr_0.7fr] lg:items-end">
+            <div><p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Artist directory</p><h2 className="mt-3 font-heading text-5xl tracking-[-0.04em] sm:text-6xl">Artists in the archive.</h2></div>
+            <p className="max-w-lg text-sm leading-7 text-muted-foreground lg:justify-self-end">Meet the artists represented in the collection and jump directly to their available and historical works.</p>
+          </header>
+
+          {artistDirectory.length ? <div className="mt-10 grid gap-5 md:grid-cols-2">{artistDirectory.map(({ name, works }) => {
+            const years = works.map((work) => work.year);
+            const media = [...new Set(works.map((work) => work.medium))];
+            const available = works.filter((work) => work.status === 'available').length;
+            return <article key={name} className="group grid min-h-72 overflow-hidden border border-border bg-background sm:grid-cols-[0.8fr_1.2fr]">
+              <div className="min-h-56 overflow-hidden bg-muted">{works[0]?.image ? <img src={works[0].image} alt={`Artwork by ${name}`} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.03]" /> : <div className="grid h-full place-items-center text-sm text-muted-foreground">Image coming soon</div>}</div>
+              <div className="flex flex-col p-6 sm:p-7"><p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">{works.length} {works.length === 1 ? 'work' : 'works'} · {available} available</p><h3 className="mt-3 font-heading text-3xl">{name}</h3><p className="mt-3 text-sm leading-6 text-muted-foreground">Working in {media.slice(0, 2).join(' and ').toLowerCase()}, with works in the archive from {Math.min(...years)}{Math.min(...years) !== Math.max(...years) ? `–${Math.max(...years)}` : ''}.</p><Button variant="outline" className="mt-auto w-full rounded-none" onClick={() => exploreArtist(name)}>View {name.split(' ')[0]}’s works <ArrowUpRight /></Button></div>
+            </article>;
+          })}</div> : <p className="mt-10 text-sm text-muted-foreground">Artist profiles will appear as works are added to the catalog.</p>}
+        </div>
       </section>
 
       {selected && <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4 backdrop-blur-sm" onMouseDown={() => setSelected(null)}><section role="dialog" aria-modal="true" aria-labelledby="artwork-title" className="relative max-h-[92vh] w-full max-w-5xl overflow-y-auto bg-background shadow-2xl" onMouseDown={(event) => event.stopPropagation()}><Button variant="secondary" size="icon-lg" className="absolute right-3 top-3 z-10 rounded-full" onClick={() => setSelected(null)} aria-label="Close artwork details"><X /></Button><div className="grid lg:grid-cols-[1.15fr_0.85fr]">
