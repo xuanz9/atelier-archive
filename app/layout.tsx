@@ -6,7 +6,7 @@ const manrope = Manrope({ variable: '--font-manrope', subsets: ['latin'] });
 const cormorant = Cormorant_Garamond({ variable: '--font-cormorant', subsets: ['latin'], weight: ['500', '600'] });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('http://localhost:3000'),
+  metadataBase: new URL('https://atelier-archive.bluepancake.chatgpt.site'),
   title: 'Atelier Archive — Contemporary Art Collection',
   description: 'A searchable digital archive of contemporary artworks, artists, provenance, and availability.',
   openGraph: {
