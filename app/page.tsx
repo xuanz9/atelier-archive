@@ -49,7 +49,7 @@ export default function Home() {
             <a href="#artists" className="text-muted-foreground transition-colors hover:text-foreground">Artists</a>
             <a href="#about" className="text-muted-foreground transition-colors hover:text-foreground">About</a>
           </nav>
-          <Button render={<a href="/admin" />} className="rounded-none px-5" size="lg">Private view <ArrowUpRight /></Button>
+          <Button render={<a href="/admin" />} nativeButton={false} className="rounded-none px-5" size="lg">Private view <ArrowUpRight /></Button>
         </div>
       </header>
 

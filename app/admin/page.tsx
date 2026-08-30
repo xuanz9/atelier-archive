@@ -66,7 +66,7 @@ export default function AdminPage() {
       <section className="min-w-0">
         <header className="flex min-h-20 items-center justify-between border-b border-border bg-background px-5 md:px-10">
           <div><p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Private catalog</p><h1 className="font-heading text-2xl">Collection manager</h1></div>
-          <div className="flex items-center gap-2"><Button render={<a href="/" />} variant="outline" className="hidden rounded-none sm:inline-flex"><ArrowLeft /> View site</Button><Button className="rounded-none" onClick={() => setOpen(true)}><Plus /> Add artwork</Button></div>
+          <div className="flex items-center gap-2"><Button render={<a href="/" />} nativeButton={false} variant="outline" className="hidden rounded-none sm:inline-flex"><ArrowLeft /> View site</Button><Button className="rounded-none" onClick={() => setOpen(true)}><Plus /> Add artwork</Button></div>
         </header>
 
         <div className="p-5 md:p-10">
