@@ -8,7 +8,12 @@ import { Input } from '@/components/ui/input';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 
 type Mode = 'create' | 'signin';
-const confirmationUrl = 'https://atelier-archive.bluepancake.chatgpt.site/account?confirmed=true';
+
+function confirmationUrl() {
+  const callback = new URL('/auth/callback', window.location.origin);
+  callback.searchParams.set('next', '/account?confirmed=true');
+  return callback.toString();
+}
 
 export default function AccountPage() {
   const [mode, setMode] = useState<Mode>('create');
@@ -23,11 +28,19 @@ export default function AccountPage() {
     const query = new URLSearchParams(window.location.search);
     const fragment = new URLSearchParams(window.location.hash.replace(/^#/, ''));
     const errorCode = query.get('error_code') ?? fragment.get('error_code');
+    const error = query.get('error');
+    const errorDescription = query.get('error_description') ?? fragment.get('error_description');
     const confirmed = query.get('confirmed') === 'true';
 
     if (errorCode === 'otp_expired') {
       setNeedsConfirmation(true);
       setMessage({ type: 'error', text: 'That confirmation link is invalid or has expired. Enter your email below and request a new link.' });
+    } else if (error === 'confirmation_failed') {
+      setNeedsConfirmation(true);
+      setMessage({ type: 'error', text: 'We could not confirm that email link. Request a fresh link below and use the newest email.' });
+    } else if (errorDescription) {
+      setNeedsConfirmation(true);
+      setMessage({ type: 'error', text: errorDescription.replace(/\+/g, ' ') });
     } else if (confirmed) {
       setMode('signin');
       setMessage({ type: 'success', text: 'Your email has been confirmed. You can now sign in.' });
@@ -70,10 +83,15 @@ export default function AccountPage() {
           password,
           options: {
             data: { full_name: fullName },
-            emailRedirectTo: confirmationUrl,
+            emailRedirectTo: confirmationUrl(),
           },
         });
         if (error) throw error;
+        if (data.user?.identities?.length === 0) {
+          setMode('signin');
+          setMessage({ type: 'error', text: 'An account already exists for this email. Sign in instead, or use a different email.' });
+          return;
+        }
         if (data.session) {
           window.location.assign('/admin');
           return;
@@ -105,7 +123,7 @@ export default function AccountPage() {
     const { error } = await supabase.auth.resend({
       type: 'signup',
       email: normalizedEmail,
-      options: { emailRedirectTo: confirmationUrl },
+      options: { emailRedirectTo: confirmationUrl() },
     });
     setPending(false);
 
