@@ -1,0 +1,17 @@
+[build]
+  publish = "netlify-proxy"
+
+# Keep the existing application and its Cloudflare-backed database/storage
+# running while presenting it through the Netlify project URL.
+[[redirects]]
+  from = "/*"
+  to = "https://atelier-archive.bluepancake.chatgpt.site/:splat"
+  status = 200
+  force = true
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
