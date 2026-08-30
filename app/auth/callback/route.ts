@@ -5,10 +5,10 @@ export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
   const flowId = requestUrl.searchParams.get('sb_flow_id');
-  const requestedNext = requestUrl.searchParams.get('next') || '/account?confirmed=true';
+  const requestedNext = requestUrl.searchParams.get('next') || '/dashboard';
   const next = requestedNext.startsWith('/') && !requestedNext.startsWith('//')
     ? requestedNext
-    : '/account?confirmed=true';
+    : '/dashboard';
 
   if (code) {
     const supabase = await getSupabaseServerClient();

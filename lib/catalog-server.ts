@@ -12,7 +12,21 @@ export async function listArtworks(includeUnpublished = false): Promise<ArtworkV
     .where(includeUnpublished ? undefined : eq(artworks.published, true))
     .orderBy(desc(artworks.year), asc(artworks.id));
 
-  return rows.map(({ artwork, artistName }) => ({
+  return rows.map(({ artwork, artistName }) => serializeArtwork(artwork, artistName));
+}
+
+export async function listOwnedArtworks(userId: string): Promise<ArtworkView[]> {
+  const rows = await getDb()
+    .select({ artwork: artworks, artistName: artists.name })
+    .from(artworks)
+    .innerJoin(artists, eq(artworks.artistId, artists.id))
+    .where(eq(artworks.ownerUserId, userId))
+    .orderBy(desc(artworks.createdAt));
+  return rows.map(({ artwork, artistName }) => serializeArtwork(artwork, artistName));
+}
+
+function serializeArtwork(artwork: typeof artworks.$inferSelect, artistName: string): ArtworkView {
+  return {
     id: artwork.id,
     accessionNumber: artwork.accessionNumber,
     slug: artwork.slug,
@@ -32,8 +46,10 @@ export async function listArtworks(includeUnpublished = false): Promise<ArtworkV
     status: artwork.status as ArtworkStatus,
     statusLabel: statusLabels[artwork.status as ArtworkStatus],
     image: artwork.primaryImageKey ? `/api/artworks/${artwork.id}/image` : artwork.externalImageUrl,
+    ownerUserId: artwork.ownerUserId,
+    submissionStatus: artwork.submissionStatus,
     published: artwork.published,
-  }));
+  };
 }
 
 export async function findArtwork(id: number, includeUnpublished = false) {

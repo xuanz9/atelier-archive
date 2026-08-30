@@ -11,7 +11,7 @@ type Mode = 'create' | 'signin';
 
 function confirmationUrl() {
   const callback = new URL('/auth/callback', window.location.origin);
-  callback.searchParams.set('next', '/account?confirmed=true');
+  callback.searchParams.set('next', '/dashboard');
   return callback.toString();
 }
 
@@ -34,7 +34,7 @@ export default function AccountPage() {
     const requestedReturnTo = query.get('returnTo');
     const returnTo = requestedReturnTo?.startsWith('/') && !requestedReturnTo.startsWith('//')
       ? requestedReturnTo
-      : '/admin';
+      : '/dashboard';
 
     getSupabaseBrowserClient().auth.getUser().then(({ data }) => {
       if (data.user && error !== 'admin_required') window.location.replace(returnTo);
@@ -103,7 +103,7 @@ export default function AccountPage() {
           return;
         }
         if (data.session) {
-          window.location.assign('/admin');
+          window.location.assign('/dashboard');
           return;
         }
         setEmail(submittedEmail);
@@ -114,7 +114,7 @@ export default function AccountPage() {
         if (error) throw error;
         const query = new URLSearchParams(window.location.search);
         const requestedReturnTo = query.get('returnTo');
-        const returnTo = requestedReturnTo?.startsWith('/') && !requestedReturnTo.startsWith('//') ? requestedReturnTo : '/admin';
+        const returnTo = requestedReturnTo?.startsWith('/') && !requestedReturnTo.startsWith('//') ? requestedReturnTo : '/dashboard';
         window.location.assign(returnTo);
       }
     } catch (error) {

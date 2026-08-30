@@ -20,6 +20,8 @@ export type ArtworkView = {
   status: ArtworkStatus;
   statusLabel: string;
   image: string | null;
+  ownerUserId: string | null;
+  submissionStatus: 'approved' | 'pending' | 'rejected';
   published: boolean;
 };
 

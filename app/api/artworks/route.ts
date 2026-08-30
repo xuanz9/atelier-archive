@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
 import { getDb } from '@/db';
 import { artists, artworks } from '@/db/schema';
-import { getAdminUser } from '@/lib/admin';
+import { getAdminUser, getAuthenticatedUser, isAdminUser } from '@/lib/admin';
 import { listArtworks, slugify } from '@/lib/catalog-server';
 import type { ArtworkStatus } from '@/lib/catalog';
 
@@ -15,7 +15,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  if (!(await getAdminUser())) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const user = await getAuthenticatedUser();
+  if (!user) return NextResponse.json({ error: 'Sign in required.' }, { status: 401 });
+  const admin = isAdminUser(user);
 
   const input = await request.json() as Record<string, unknown>;
   const title = String(input.title || '').trim();
@@ -57,7 +59,9 @@ export async function POST(request: Request) {
     priceCents: input.price == null || input.price === '' ? null : Math.max(0, Math.round(Number(input.price) * 100)),
     currency: 'USD',
     status,
-    published: input.published !== false,
+    ownerUserId: admin ? null : user.id,
+    submissionStatus: admin ? 'approved' : 'pending',
+    published: admin && input.published !== false,
     createdAt: new Date(),
     updatedAt: new Date(),
   }).returning();

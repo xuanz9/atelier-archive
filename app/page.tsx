@@ -19,9 +19,18 @@ export default function Home() {
   const [selected, setSelected] = useState<ArtworkView | null>(null);
   const [inquiryState, setInquiryState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [signedIn, setSignedIn] = useState(false);
+  const [cartIds, setCartIds] = useState<Set<number>>(new Set());
+  const [cartMessage, setCartMessage] = useState('');
 
   useEffect(() => {
-    getSupabaseBrowserClient().auth.getSession().then(({ data }) => setSignedIn(Boolean(data.session)));
+    getSupabaseBrowserClient().auth.getSession().then(async ({ data }) => {
+      const authenticated = Boolean(data.session);
+      setSignedIn(authenticated);
+      if (authenticated) {
+        const response = await fetch('/api/cart');
+        if (response.ok) setCartIds(new Set((await response.json() as { items: ArtworkView[] }).items.map((item) => item.id)));
+      }
+    });
     fetch('/api/artworks')
       .then(async (response) => {
         if (!response.ok) throw new Error('Unable to load the collection.');
@@ -70,13 +79,23 @@ export default function Home() {
     setInquiryState(response.ok ? 'sent' : 'error');
   }
 
+  async function addToCart(work: ArtworkView) {
+    if (!signedIn) { window.location.assign('/account?returnTo=%2F'); return; }
+    setCartMessage('Adding…');
+    const response = await fetch('/api/cart', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ artworkId: work.id }) });
+    if (response.ok) {
+      setCartIds((current) => new Set(current).add(work.id));
+      setCartMessage('Added to your cart.');
+    } else setCartMessage((await response.json() as { error?: string }).error || 'Unable to add this work.');
+  }
+
   return (
     <main className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border/70 bg-background/95">
         <div className="mx-auto flex h-20 max-w-[1600px] items-center justify-between px-5 md:px-10">
           <a href="#collection" className="flex items-center gap-3" aria-label="Atelier Archive home"><span className="grid size-9 place-items-center border border-foreground text-sm font-semibold">A</span><span className="font-heading text-lg tracking-[0.16em]">ATELIER ARCHIVE</span></a>
-          <nav className="hidden items-center gap-8 text-sm md:flex" aria-label="Main navigation"><a href="#collection" className="border-b border-foreground pb-1">Collection</a><a href="#artists" className="text-muted-foreground transition-colors hover:text-foreground">Artists</a><a href={signedIn ? '/admin' : '/account'} className="text-muted-foreground transition-colors hover:text-foreground">{signedIn ? 'Dashboard' : 'Account'}</a></nav>
-          <Button render={<a href={signedIn ? '/admin' : '/account'} />} nativeButton={false} className="rounded-none px-5" size="lg">{signedIn ? 'Dashboard' : 'My account'} <ArrowUpRight /></Button>
+          <nav className="hidden items-center gap-8 text-sm md:flex" aria-label="Main navigation"><a href="#collection" className="border-b border-foreground pb-1">Collection</a><a href="#artists" className="text-muted-foreground transition-colors hover:text-foreground">Artists</a><a href={signedIn ? '/dashboard' : '/account'} className="text-muted-foreground transition-colors hover:text-foreground">{signedIn ? `Dashboard${cartIds.size ? ` (${cartIds.size})` : ''}` : 'Account'}</a></nav>
+          <Button render={<a href={signedIn ? '/dashboard' : '/account'} />} nativeButton={false} className="rounded-none px-5" size="lg">{signedIn ? `Dashboard${cartIds.size ? ` · ${cartIds.size}` : ''}` : 'My account'} <ArrowUpRight /></Button>
         </div>
       </header>
 
@@ -125,7 +144,7 @@ export default function Home() {
         <div className="flex flex-col p-7 sm:p-10"><header className="border-b border-border pb-7"><div className="mb-4 flex items-center justify-between pr-8"><Badge variant="outline" className="rounded-full px-3 py-1 uppercase tracking-[0.12em]">{selected.statusLabel}</Badge><span className="text-sm text-muted-foreground">{selected.accessionNumber}</span></div><h2 id="artwork-title" className="font-heading text-4xl tracking-[-0.03em] sm:text-5xl">{selected.title}</h2><p className="text-base text-muted-foreground">{selected.artist}, {selected.year}</p></header>
         <dl className="grid grid-cols-2 gap-x-6 gap-y-5 border-b border-border py-7 text-sm"><div><dt className="text-xs uppercase tracking-wider text-muted-foreground">Medium</dt><dd className="mt-1.5">{selected.medium}</dd></div><div><dt className="text-xs uppercase tracking-wider text-muted-foreground">Dimensions</dt><dd className="mt-1.5">{selected.dimensions}</dd></div><div><dt className="text-xs uppercase tracking-wider text-muted-foreground">Price</dt><dd className="mt-1.5">{selected.price}</dd></div><div><dt className="text-xs uppercase tracking-wider text-muted-foreground">Location</dt><dd className="mt-1.5">Indianapolis, IN</dd></div></dl>
         <div className="py-7"><p className="text-sm leading-7 text-muted-foreground">{selected.description || 'Additional catalog notes are available on request.'}</p>{selected.provenance && <><p className="mt-5 text-xs uppercase tracking-wider text-muted-foreground">Provenance</p><p className="mt-2 text-sm">{selected.provenance}</p></>}</div>
-        {inquiryState === 'sent' ? <div className="mt-auto border border-border bg-secondary/50 p-5" role="status"><Check className="mb-3 size-5" /><p className="font-heading text-2xl">Inquiry received</p><p className="mt-1 text-sm text-muted-foreground">We’ll reply with availability and viewing details within two business days.</p></div> : <form onSubmit={submitInquiry} className="mt-auto border-t border-border pt-6"><p className="mb-4 flex items-center gap-2 text-sm font-medium"><Mail className="size-4" /> Inquire about this work</p><div className="grid gap-3 sm:grid-cols-2"><Input name="name" required placeholder="Your name" className="h-10 rounded-none" /><Input name="email" type="email" required placeholder="Email address" className="h-10 rounded-none" /></div><textarea name="message" placeholder="Message (optional)" className="mt-3 min-h-20 w-full border border-input bg-transparent px-3 py-2 text-sm outline-none focus:border-ring" />{inquiryState === 'error' && <p className="mt-2 text-sm text-red-700">Your inquiry could not be sent. Please try again.</p>}<Button type="submit" disabled={inquiryState === 'sending'} className="mt-3 h-11 w-full rounded-none">{inquiryState === 'sending' ? 'Sending…' : 'Send inquiry'} <ArrowUpRight /></Button></form>}
+        <div className="mt-auto border-t border-border pt-6"><Button type="button" variant="outline" disabled={selected.status === 'sold' || cartIds.has(selected.id)} onClick={() => addToCart(selected)} className="mb-4 h-11 w-full rounded-none">{cartIds.has(selected.id) ? 'Saved in your cart' : selected.status === 'sold' ? 'This work is sold' : 'Add to cart'}</Button>{cartMessage && <p className="mb-4 text-center text-xs text-muted-foreground">{cartMessage}</p>}{inquiryState === 'sent' ? <div className="border border-border bg-secondary/50 p-5" role="status"><Check className="mb-3 size-5" /><p className="font-heading text-2xl">Inquiry received</p><p className="mt-1 text-sm text-muted-foreground">We’ll reply with availability and viewing details within two business days.</p></div> : <form onSubmit={submitInquiry}><p className="mb-4 flex items-center gap-2 text-sm font-medium"><Mail className="size-4" /> Inquire about this work</p><div className="grid gap-3 sm:grid-cols-2"><Input name="name" required placeholder="Your name" className="h-10 rounded-none" /><Input name="email" type="email" required placeholder="Email address" className="h-10 rounded-none" /></div><textarea name="message" placeholder="Message (optional)" className="mt-3 min-h-20 w-full border border-input bg-transparent px-3 py-2 text-sm outline-none focus:border-ring" />{inquiryState === 'error' && <p className="mt-2 text-sm text-red-700">Your inquiry could not be sent. Please try again.</p>}<Button type="submit" disabled={inquiryState === 'sending'} className="mt-3 h-11 w-full rounded-none">{inquiryState === 'sending' ? 'Sending…' : 'Send inquiry'} <ArrowUpRight /></Button></form>}</div>
         </div>
       </div></section></div>}
     </main>

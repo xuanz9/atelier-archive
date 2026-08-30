@@ -3,17 +3,19 @@ import { env } from 'cloudflare:workers';
 import { eq } from 'drizzle-orm';
 import { getDb } from '@/db';
 import { artworkImages, artworks } from '@/db/schema';
-import { getAdminUser } from '@/lib/admin';
+import { getAuthenticatedUser, isAdminUser } from '@/lib/admin';
 import { findArtwork } from '@/lib/catalog-server';
 
 const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    if (!(await getAdminUser())) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    const user = await getAuthenticatedUser();
+    if (!user) return NextResponse.json({ error: 'Sign in required.' }, { status: 401 });
     const id = Number((await context.params).id);
     const artwork = await findArtwork(id, true);
     if (!artwork) return NextResponse.json({ error: 'Artwork not found.' }, { status: 404 });
+    if (!isAdminUser(user) && artwork.ownerUserId !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     const form = await request.formData();
     const file = form.get('image');
     if (!(file instanceof File) || !allowedTypes.has(file.type) || file.size > 10 * 1024 * 1024) {

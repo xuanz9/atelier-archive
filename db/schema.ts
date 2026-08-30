@@ -28,6 +28,8 @@ export const artworks = sqliteTable('artworks', {
   status: text('status', { enum: ['available', 'reserved', 'sold', 'not_for_sale'] }).notNull().default('available'),
   primaryImageKey: text('primary_image_key'),
   externalImageUrl: text('external_image_url'),
+  ownerUserId: text('owner_user_id'),
+  submissionStatus: text('submission_status', { enum: ['approved', 'pending', 'rejected'] }).notNull().default('approved'),
   published: integer('published', { mode: 'boolean' }).notNull().default(false),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
@@ -37,6 +39,16 @@ export const artworks = sqliteTable('artworks', {
   index('idx_artworks_artist_id').on(table.artistId),
   index('idx_artworks_status_published').on(table.status, table.published),
   index('idx_artworks_year').on(table.year),
+]);
+
+export const cartItems = sqliteTable('cart_items', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: text('user_id').notNull(),
+  artworkId: integer('artwork_id').notNull().references(() => artworks.id, { onDelete: 'cascade' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+}, (table) => [
+  uniqueIndex('idx_cart_user_artwork').on(table.userId, table.artworkId),
+  index('idx_cart_user_created').on(table.userId, table.createdAt),
 ]);
 
 export const artworkImages = sqliteTable('artwork_images', {
