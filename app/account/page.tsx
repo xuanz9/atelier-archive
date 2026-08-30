@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, LoaderCircle, LockKeyhole, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -8,19 +8,37 @@ import { Input } from '@/components/ui/input';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 
 type Mode = 'create' | 'signin';
+const confirmationUrl = 'https://atelier-archive.bluepancake.chatgpt.site/account?confirmed=true';
 
 export default function AccountPage() {
   const [mode, setMode] = useState<Mode>('create');
   const [showPassword, setShowPassword] = useState(false);
   const [accepted, setAccepted] = useState(false);
+  const [email, setEmail] = useState('');
+  const [needsConfirmation, setNeedsConfirmation] = useState(false);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
+
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.search);
+    const fragment = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    const errorCode = query.get('error_code') ?? fragment.get('error_code');
+    const confirmed = query.get('confirmed') === 'true';
+
+    if (errorCode === 'otp_expired') {
+      setNeedsConfirmation(true);
+      setMessage({ type: 'error', text: 'That confirmation link is invalid or has expired. Enter your email below and request a new link.' });
+    } else if (confirmed) {
+      setMode('signin');
+      setMessage({ type: 'success', text: 'Your email has been confirmed. You can now sign in.' });
+    }
+  }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage(null);
     const form = new FormData(event.currentTarget);
-    const email = String(form.get('email') ?? '').trim();
+    const submittedEmail = String(form.get('email') ?? '').trim();
     const password = String(form.get('password') ?? '');
     const confirmPassword = String(form.get('confirmPassword') ?? '');
     const fullName = String(form.get('fullName') ?? '').trim();
@@ -48,11 +66,11 @@ export default function AccountPage() {
     try {
       if (mode === 'create') {
         const { data, error } = await supabase.auth.signUp({
-          email,
+          email: submittedEmail,
           password,
           options: {
             data: { full_name: fullName },
-            emailRedirectTo: `${window.location.origin}/account?confirmed=true`,
+            emailRedirectTo: confirmationUrl,
           },
         });
         if (error) throw error;
@@ -60,9 +78,11 @@ export default function AccountPage() {
           window.location.assign('/admin');
           return;
         }
+        setEmail(submittedEmail);
+        setNeedsConfirmation(true);
         setMessage({ type: 'success', text: 'Check your email to confirm your account, then return here to sign in.' });
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({ email: submittedEmail, password });
         if (error) throw error;
         window.location.assign('/admin');
       }
@@ -71,6 +91,29 @@ export default function AccountPage() {
     } finally {
       setPending(false);
     }
+  }
+
+  async function resendConfirmation() {
+    const normalizedEmail = email.trim();
+    if (!normalizedEmail) {
+      setMessage({ type: 'error', text: 'Enter your email address first.' });
+      return;
+    }
+
+    setPending(true);
+    const supabase = getSupabaseBrowserClient();
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: normalizedEmail,
+      options: { emailRedirectTo: confirmationUrl },
+    });
+    setPending(false);
+
+    if (error) {
+      setMessage({ type: 'error', text: error.message });
+      return;
+    }
+    setMessage({ type: 'success', text: 'A new confirmation email has been sent. Use the newest link.' });
   }
 
   function switchMode(nextMode: Mode) {
@@ -114,7 +157,7 @@ export default function AccountPage() {
               {mode === 'create' && (
                 <label className="block text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">Full name<Input name="fullName" autoComplete="name" required className="mt-2 h-12 rounded-none bg-transparent text-base normal-case tracking-normal text-foreground" placeholder="Your name" /></label>
               )}
-              <label className="block text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">Email address<div className="relative mt-2"><Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2" /><Input name="email" type="email" autoComplete="email" required className="h-12 rounded-none bg-transparent pl-10 text-base normal-case tracking-normal text-foreground" placeholder="you@example.com" /></div></label>
+              <label className="block text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">Email address<div className="relative mt-2"><Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2" /><Input name="email" type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} className="h-12 rounded-none bg-transparent pl-10 text-base normal-case tracking-normal text-foreground" placeholder="you@example.com" /></div></label>
               <label className="block text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">Password<div className="relative mt-2"><LockKeyhole className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2" /><Input name="password" type={showPassword ? 'text' : 'password'} autoComplete={mode === 'create' ? 'new-password' : 'current-password'} required minLength={8} className="h-12 rounded-none bg-transparent px-10 text-base normal-case tracking-normal text-foreground" placeholder="At least 8 characters" /><button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" aria-label={showPassword ? 'Hide password' : 'Show password'}>{showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}</button></div></label>
               {mode === 'create' && (
                 <><label className="block text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">Confirm password<Input name="confirmPassword" type={showPassword ? 'text' : 'password'} autoComplete="new-password" required minLength={8} className="mt-2 h-12 rounded-none bg-transparent text-base normal-case tracking-normal text-foreground" placeholder="Repeat your password" /></label><div className="flex items-start gap-3"><Checkbox id="terms" checked={accepted} onCheckedChange={(checked) => setAccepted(checked === true)} /><label htmlFor="terms" className="text-xs leading-5 text-muted-foreground">I agree to the terms of use and acknowledge the privacy policy.</label></div></>
@@ -123,6 +166,7 @@ export default function AccountPage() {
               {message && <div role={message.type === 'error' ? 'alert' : 'status'} className={`flex gap-3 border p-4 text-sm ${message.type === 'error' ? 'border-destructive/30 bg-destructive/5 text-destructive' : 'border-emerald-700/20 bg-emerald-50 text-emerald-900'}`}>{message.type === 'success' && <Check className="mt-0.5 size-4 shrink-0" />}<span>{message.text}</span></div>}
 
               <Button type="submit" disabled={pending} className="h-12 w-full rounded-none text-sm">{pending ? <><LoaderCircle className="animate-spin" /> Please wait</> : <>{mode === 'create' ? 'Create account' : 'Sign in'} <ArrowRight /></>}</Button>
+              {needsConfirmation && <Button type="button" variant="outline" disabled={pending} onClick={resendConfirmation} className="h-12 w-full rounded-none text-sm">Resend confirmation email</Button>}
             </form>
 
             <p className="mt-6 text-center text-xs text-muted-foreground">{mode === 'create' ? 'Already have an account?' : 'New to Atelier Archive?'} <button type="button" onClick={() => switchMode(mode === 'create' ? 'signin' : 'create')} className="font-medium text-foreground underline underline-offset-4">{mode === 'create' ? 'Sign in' : 'Create an account'}</button></p>
