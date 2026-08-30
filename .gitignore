@@ -1,5 +1,6 @@
 # dependencies
 /node_modules
+.venv/
 /.pnp
 .pnpm-store/
 .pnp.*
@@ -16,6 +17,7 @@
 /.next/
 /.vinext/
 /out/
+*.tsbuildinfo
 
 # misc
 .DS_Store

@@ -27,6 +27,7 @@ export const artworks = sqliteTable('artworks', {
   currency: text('currency').notNull().default('USD'),
   status: text('status', { enum: ['available', 'reserved', 'sold', 'not_for_sale'] }).notNull().default('available'),
   primaryImageKey: text('primary_image_key'),
+  externalImageUrl: text('external_image_url'),
   published: integer('published', { mode: 'boolean' }).notNull().default(false),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),

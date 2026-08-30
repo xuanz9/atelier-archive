@@ -1,14 +1,10 @@
 import type { ReactNode } from 'react';
 import { redirect } from 'next/navigation';
-import { getSupabaseServerClient } from '@/lib/supabase/server';
+import { getAdminUser } from '@/lib/admin';
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
-  const supabase = await getSupabaseServerClient();
-
-  if (!supabase) redirect('/account?error=configuration');
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect('/account?returnTo=%2Fadmin');
+  const user = await getAdminUser();
+  if (!user) redirect('/account?returnTo=%2Fadmin&error=admin_required');
 
   return children;
 }
