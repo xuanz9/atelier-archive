@@ -4,7 +4,7 @@
 
 A full-stack catalog for discovering, documenting, and managing contemporary art. Visitors can browse the collection, search by artist or medium, save works, and send inquiries. Signed-in artists can submit work for review, while administrators manage inventory, publication status, and incoming inquiries.
 
-[View the live site](https://atelier-archive.bluepancake.chatgpt.site)
+[View the live site](atelierrchive.netlify.app)
 
 ## Features
 
