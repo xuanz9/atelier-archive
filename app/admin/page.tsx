@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { ArtworkStatus, ArtworkView } from '@/lib/catalog';
+import { optimizeArtworkImage } from '@/lib/image-upload';
 
 type InquiryView = { inquiry: { id: number; name: string; email: string; message: string | null; status: string; createdAt: string }; artworkTitle: string };
 const statusOrder: ArtworkStatus[] = ['available', 'reserved', 'sold'];
@@ -70,7 +71,8 @@ export default function AdminPage() {
       const result = await response.json() as { artwork?: { id: number }; error?: string };
       if (!response.ok || !result.artwork) throw new Error(result.error || 'Unable to save artwork.');
       setSaveStep('Uploading image…');
-      const imageForm = new FormData(); imageForm.set('image', selectedImage);
+      const optimizedImage = await optimizeArtworkImage(selectedImage);
+      const imageForm = new FormData(); imageForm.set('image', optimizedImage);
       const imageResponse = await fetch(`/api/artworks/${result.artwork.id}/images`, { method: 'POST', body: imageForm });
       if (!imageResponse.ok) throw new Error((await imageResponse.json() as { error?: string }).error || 'Artwork saved, but image upload failed.');
       await loadData(); setSaved(true);

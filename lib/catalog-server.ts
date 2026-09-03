@@ -45,7 +45,9 @@ function serializeArtwork(artwork: typeof artworks.$inferSelect, artistName: str
     price: formatPrice(artwork.priceCents, artwork.currency, artwork.status as ArtworkStatus),
     status: artwork.status as ArtworkStatus,
     statusLabel: statusLabels[artwork.status as ArtworkStatus],
-    image: artwork.primaryImageKey ? `/api/artworks/${artwork.id}/image` : artwork.externalImageUrl,
+    image: artwork.primaryImageKey
+      ? `/api/artworks/${artwork.id}/image?v=${encodeURIComponent(artwork.primaryImageKey.split('/').pop() || artwork.primaryImageKey)}`
+      : artwork.externalImageUrl,
     ownerUserId: artwork.ownerUserId,
     submissionStatus: artwork.submissionStatus,
     published: artwork.published,

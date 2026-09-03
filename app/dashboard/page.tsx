@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { ArtworkView } from '@/lib/catalog';
+import { optimizeArtworkImage } from '@/lib/image-upload';
 
 type Session = { authenticated: boolean; isAdmin: boolean; user: { email?: string } };
 
@@ -42,7 +43,8 @@ export default function MemberDashboard() {
       const result = await response.json() as { artwork?: { id: number }; error?: string };
       if (!response.ok || !result.artwork) throw new Error(result.error || 'Unable to create submission.');
       setSaveStep('Uploading image…');
-      const upload = new FormData(); upload.set('image', selectedImage);
+      const optimizedImage = await optimizeArtworkImage(selectedImage);
+      const upload = new FormData(); upload.set('image', optimizedImage);
       const uploadResponse = await fetch(`/api/artworks/${result.artwork.id}/images`, { method: 'POST', body: upload });
       if (!uploadResponse.ok) throw new Error((await uploadResponse.json() as { error?: string }).error || 'Image upload failed.');
       await loadData(); setOpen(false); setSelectedImage(null); setImagePreview('');
