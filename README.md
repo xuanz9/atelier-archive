@@ -3,8 +3,7 @@
 ![Atelier Archive preview](public/og.png)
 
 A full-stack catalog for discovering, documenting, and managing contemporary art. Visitors can browse the collection, search by artist or medium, save works, and send inquiries. Signed-in artists can submit work for review, while administrators manage inventory, publication status, and incoming inquiries.
-
-[Link](atelierrchive.netlify.app)
+(atelierrchive.netlify.app)
 
 ## Features
 
